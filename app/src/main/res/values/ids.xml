@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="take_photo" type="id"/>
+    <item name="select_photo" type="id"/>
+</resources>
