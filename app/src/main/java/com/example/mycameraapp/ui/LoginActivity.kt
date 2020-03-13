@@ -1,4 +1,4 @@
-package com.example.mycameraapp
+package com.example.mycameraapp.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -6,13 +6,17 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import com.example.mycameraapp.Injection
+import com.example.mycameraapp.R
+import com.example.mycameraapp.model.FirebaseModel
+import com.example.mycameraapp.view_model.FirebaseViewModel
+import com.example.mycameraapp.view_model.FirebaseViewModelFactory
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_login.*
 
-
-class RegisterActivity : AppCompatActivity() {
+class LoginActivity : AppCompatActivity() {
 
     private lateinit var firebaseViewModelFactory: FirebaseViewModelFactory
     private lateinit var firebaseViewModel: FirebaseViewModel
@@ -21,10 +25,6 @@ class RegisterActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
-
-        button_register.visibility = View.INVISIBLE
-        button_login.text = "Registar"
-        supportActionBar?.title = "Registar novo utilizador"
 
         firebaseViewModelFactory =
             Injection.provideFirebaseViewModelFactory()
@@ -38,12 +38,12 @@ class RegisterActivity : AppCompatActivity() {
             .subscribe {
                 setViewsVisibility(false)
                 when(it) {
-                    FirebaseModel.REGISTER_SUCCESS -> {
+                    FirebaseModel.LOGIN_SUCCESS -> {
                         val intent = Intent(this, MainActivity::class.java)
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         startActivity(intent)
                     }
-                    FirebaseModel.REGISTER_FAILED -> {
+                    FirebaseModel.LOGIN_FAILED -> {
 
                     }
                 }
@@ -52,7 +52,7 @@ class RegisterActivity : AppCompatActivity() {
         button_login.setOnClickListener {
             if (!input_password.text.toString().isNullOrBlank() && !input_user.text.toString().isNullOrBlank()) {
                 setViewsVisibility(true)
-                firebaseViewModel.register(
+                firebaseViewModel.login(
                     input_user.text.toString(),
                     input_password.text.toString(),
                     this
@@ -61,6 +61,11 @@ class RegisterActivity : AppCompatActivity() {
             else {
                 Toast.makeText(this, "Email e/ou password em falta.", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        button_register.setOnClickListener {
+            val intent = Intent(this, RegisterActivity::class.java)
+            startActivity(intent)
         }
 
     }

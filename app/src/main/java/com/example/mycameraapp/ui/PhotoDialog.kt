@@ -1,13 +1,15 @@
-package com.example.mycameraapp
+package com.example.mycameraapp.ui
 
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
-import com.bumptech.glide.Glide
+import androidx.swiperefreshlayout.widget.CircularProgressDrawable
+import com.example.mycameraapp.GlideApp
+import com.example.mycameraapp.R
 import kotlinx.android.synthetic.main.dialog_fullscreen_image_view.*
 
 class PhotoDialog : DialogFragment() {
@@ -32,7 +34,17 @@ class PhotoDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        Glide.with(requireActivity()).load(Uri.parse(arguments?.getString(PHOTO_URI))).into(image_view)
+        val circularProgressDrawable = CircularProgressDrawable(requireContext())
+        circularProgressDrawable.strokeWidth = 5f
+        circularProgressDrawable.centerRadius = 30f
+        circularProgressDrawable.backgroundColor = ContextCompat.getColor(requireContext(),
+            R.color.colorAccent
+        )
+        circularProgressDrawable.start()
+
+
+        GlideApp.with(requireActivity())
+            .load(Uri.parse(arguments?.getString(PHOTO_URI))).into(image_view)
     }
 
 

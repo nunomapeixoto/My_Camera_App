@@ -1,20 +1,25 @@
-package com.example.mycameraapp
+package com.example.mycameraapp.model
 
 
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.mycameraapp.Photo
 import com.google.firebase.auth.*
 import com.google.firebase.storage.FirebaseStorage
 import io.reactivex.subjects.BehaviorSubject
+import kotlin.math.roundToInt
 
 
-class FirebaseModel(){
+class FirebaseModel {
 
     var firebaseUser : FirebaseUser? = null
-    var authResultCode: BehaviorSubject<Int> = BehaviorSubject.create()
+    var uploadProgressObservable: BehaviorSubject<Int> = BehaviorSubject.create()
+    var authResults: BehaviorSubject<Int> = BehaviorSubject.create()
+    var storageResults: BehaviorSubject<Int> = BehaviorSubject.create()
     var photosObservableList: BehaviorSubject<List<Photo>> = BehaviorSubject.create()
+    var photoObservable: BehaviorSubject<Photo> = BehaviorSubject.create()
 
     private val auth = FirebaseAuth.getInstance()
     private val storage = FirebaseStorage.getInstance()
@@ -39,13 +44,17 @@ class FirebaseModel(){
                         Photo(
                             name.toString(),
                             date.toString(),
-                            item.storage.toString()))
+                            item.path
+                        )
+                    )
 
                 }
 
                 photosObservableList.onNext(photosList)
             }
             .addOnFailureListener {
+
+                storageResults.onNext(LISTING_FAILED)
 
             }
     }
@@ -58,8 +67,31 @@ class FirebaseModel(){
 
         val file = Uri.parse(photo.uri)
         val uploadTask = imagesRef.putFile(file)
-        uploadTask.addOnFailureListener {  }
-        uploadTask.addOnSuccessListener {  }
+        uploadTask.addOnProgressListener {
+
+            uploadProgressObservable.onNext((100.0 * it.bytesTransferred / it.totalByteCount).roundToInt())
+
+        }
+
+        uploadTask.addOnFailureListener {
+            storageResults.onNext(UPLOAD_FAILED)
+        }
+        uploadTask.addOnSuccessListener {
+            if (it.task.isSuccessful) {
+
+                imagesRef.downloadUrl.addOnSuccessListener { uri ->
+                    photoObservable.onNext(
+                        Photo(
+                            photo.name,
+                            photo.date,
+                            storage.getReferenceFromUrl(uri.toString()).path
+                        )
+                    )
+                }
+            } else {
+                storageResults.onNext(UPLOAD_FAILED)
+            }
+        }
     }
 
     fun login(user: String, pwd: String, activity: AppCompatActivity) {
@@ -68,11 +100,11 @@ class FirebaseModel(){
             .addOnCompleteListener(activity) { task ->
                 if (task.isSuccessful) {
                     firebaseUser = auth.currentUser
-                    authResultCode.onNext(LOGIN_SUCCESS)
+                    authResults.onNext(LOGIN_SUCCESS)
 
                 } else {
                     throwException(task.exception!!, activity)
-                    authResultCode.onNext(LOGIN_FAILED)
+                    authResults.onNext(LOGIN_FAILED)
                 }
             }
 
@@ -84,12 +116,11 @@ class FirebaseModel(){
             .addOnCompleteListener(activity) { task ->
                 if (task.isSuccessful) {
                     firebaseUser = auth.currentUser
-                    authResultCode.onNext(REGISTER_SUCCESS)
+                    authResults.onNext(REGISTER_SUCCESS)
                 } else {
                     throwException(task.exception!!, activity)
 
-
-                    authResultCode.onNext(REGISTER_FAILED)
+                    authResults.onNext(REGISTER_FAILED)
 
                 }
 
@@ -120,13 +151,16 @@ class FirebaseModel(){
         const val REGISTER_SUCCESS = 3
         const val REGISTER_FAILED = 4
 
+        const val UPLOAD_FAILED = 5
+        const val LISTING_FAILED = 6
 
         @Volatile
         private var instance: FirebaseModel? = null
 
         fun getInstance() =
             instance ?: synchronized(this) {
-                instance ?: FirebaseModel().also { instance = it }
+                instance
+                    ?: FirebaseModel().also { instance = it }
             }
     }
 

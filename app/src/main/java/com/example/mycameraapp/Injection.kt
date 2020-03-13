@@ -1,6 +1,10 @@
 package com.example.mycameraapp
 
 import android.content.Context
+import com.example.mycameraapp.model.FirebaseModel
+import com.example.mycameraapp.model.PhotoModel
+import com.example.mycameraapp.view_model.FirebaseViewModelFactory
+import com.example.mycameraapp.view_model.PhotoViewModelFactory
 
 object Injection {
 

@@ -1,4 +1,4 @@
-package com.example.mycameraapp
+package com.example.mycameraapp.ui
 
 import android.Manifest
 import android.content.Intent
@@ -12,7 +12,7 @@ import android.view.LayoutInflater
 import androidx.appcompat.app.AppCompatActivity
 import android.view.View
 import android.widget.EditText
-import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -21,30 +21,34 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import com.example.mycameraapp.*
+import com.example.mycameraapp.model.FirebaseModel
+import com.example.mycameraapp.view_model.FirebaseViewModel
+import com.example.mycameraapp.view_model.FirebaseViewModelFactory
+import com.example.mycameraapp.view_model.PhotoViewModel
+import com.example.mycameraapp.view_model.PhotoViewModelFactory
 import com.google.firebase.auth.FirebaseAuth
 import com.leinardi.android.speeddial.SpeedDialActionItem
-import com.leinardi.android.speeddial.SpeedDialView
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
+import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.content_main.*
 
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MainActivity : AppCompatActivity(), PhotosAdapter.PhotoAdapterListener {
+class MainActivity : AppCompatActivity(),
+    PhotosAdapter.PhotoAdapterListener {
 
     private val REQUEST_READ_EXTERNAL_STORAGE = 1
     private val REQUEST_TAKE_PHOTO = 1
     private val REQUEST_SELECT_PHOTO = 2
 
-    private lateinit var speedDial: SpeedDialView
-
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var emptyTv: TextView
-    private lateinit var adapter: PhotosAdapter
+    private var adapter: PhotosAdapter =
+        PhotosAdapter(mutableListOf(), this)
 
     private lateinit var firebaseViewModelFactory: FirebaseViewModelFactory
     private lateinit var firebaseViewModel: FirebaseViewModel
@@ -61,8 +65,13 @@ class MainActivity : AppCompatActivity(), PhotosAdapter.PhotoAdapterListener {
         val auth = FirebaseAuth.getInstance()
         supportActionBar?.subtitle = auth.currentUser?.email
 
+        upload_progress_bar.hide()
+        setViewsVisibility(true)
+
         photoViewModelFactory =
-            Injection.providePhotoViewModelFactory(applicationContext)
+            Injection.providePhotoViewModelFactory(
+                applicationContext
+            )
         photoViewModel = ViewModelProvider(this, photoViewModelFactory).get(PhotoViewModel::class.java)
 
         firebaseViewModelFactory =
@@ -79,36 +88,31 @@ class MainActivity : AppCompatActivity(), PhotosAdapter.PhotoAdapterListener {
 //                setViewsVisibility()
 //            })
 
-        compositeDisposable.add(firebaseViewModel.getPhotos()
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe {
-                adapter = PhotosAdapter(it, this@MainActivity)
-                recyclerView.adapter = adapter
-                setViewsVisibility()
-            })
-
-        recyclerView = findViewById(R.id.recycler_view)
-        emptyTv = findViewById(R.id.sem_fotos_tv)
-
-
-        speedDial = findViewById(R.id.fab_speed_dial)
-
-        speedDial.addActionItem(
-            SpeedDialActionItem.Builder(R.id.select_photo, R.drawable.ic_photo_album_white_24dp)
-                .setLabelBackgroundColor(ContextCompat.getColor(this, R.color.colorPreferencesItem))
+        fab_speed_dial.addActionItem(
+            SpeedDialActionItem.Builder(
+                R.id.select_photo,
+                R.drawable.ic_photo_album_white_24dp
+            )
+                .setLabelBackgroundColor(ContextCompat.getColor(this,
+                    R.color.colorPreferencesItem
+                ))
                 .setLabelColor(Color.WHITE)
                 .setLabel(getString(R.string.select_photo))
                 .create())
 
-        speedDial.addActionItem(
-            SpeedDialActionItem.Builder(R.id.take_photo, R.drawable.ic_camera_alt_white_24dp)
-                .setLabelBackgroundColor(ContextCompat.getColor(this, R.color.colorPreferencesItem))
+        fab_speed_dial.addActionItem(
+            SpeedDialActionItem.Builder(
+                R.id.take_photo,
+                R.drawable.ic_camera_alt_white_24dp
+            )
+                .setLabelBackgroundColor(ContextCompat.getColor(this,
+                    R.color.colorPreferencesItem
+                ))
                 .setLabelColor(Color.WHITE)
                 .setLabel(getString(R.string.take_photo))
                 .create())
 
-        speedDial.setOnActionSelectedListener { actionItem ->
+        fab_speed_dial.setOnActionSelectedListener { actionItem ->
             when (actionItem?.id) {
                 R.id.select_photo -> {
                     checkForPermissions()
@@ -121,14 +125,68 @@ class MainActivity : AppCompatActivity(), PhotosAdapter.PhotoAdapterListener {
         }
 
         val linearLayoutManager = LinearLayoutManager(this)
-        recyclerView.layoutManager = linearLayoutManager
-        recyclerView.itemAnimator = DefaultItemAnimator()
-        recyclerView.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
+        recycler_view.layoutManager = linearLayoutManager
+        recycler_view.itemAnimator = DefaultItemAnimator()
+        recycler_view.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
+
+        recycler_view.adapter = adapter
+
+        setObservers()
 
         firebaseViewModel.getPhotosList()
 
+
     }
 
+
+    private fun setObservers() {
+        compositeDisposable.add(firebaseViewModel.getPhotos()
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe {
+                adapter.setList(it.toMutableList())
+                setViewsVisibility(false)
+            })
+
+        compositeDisposable.add(firebaseViewModel.getNewUploadedPhoto()
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe {
+                adapter.addPhoto(it)
+                upload_progress_bar.hide()
+                setViewsVisibility(false)
+            })
+
+        compositeDisposable.add(firebaseViewModel.getUploadProgress()
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe {
+                upload_progress_bar.progress = it
+            })
+
+        compositeDisposable.add(firebaseViewModel.getStorageResults()
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe {
+                when(it) {
+                    FirebaseModel.LISTING_FAILED -> {
+                        Toast.makeText(
+                            this,
+                            "Não foi possível sincronizar com o firebase.",
+                            Toast.LENGTH_SHORT).show()
+                        setViewsVisibility(false)
+                    }
+                    FirebaseModel.UPLOAD_FAILED -> {
+                        Toast.makeText(
+                            this,
+                            "Não foi possível guardar a foto no firebase.",
+                            Toast.LENGTH_SHORT).show()
+                        upload_progress_bar.hide()
+                        setViewsVisibility(false)
+                    }
+                }
+            })
+    }
 
     private fun checkForPermissions() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -223,8 +281,10 @@ class MainActivity : AppCompatActivity(), PhotosAdapter.PhotoAdapterListener {
     }
 
 
-    private fun setViewsVisibility() {
-        emptyTv.visibility = if (adapter.itemCount > 0) View.GONE else View.VISIBLE
+    private fun setViewsVisibility(isLoading : Boolean) {
+
+        sem_fotos_tv.visibility = if (isLoading || adapter.itemCount > 0) View.GONE else View.VISIBLE
+        if (isLoading) content_progress_bar.show() else content_progress_bar.hide()
 
     }
 
@@ -240,15 +300,19 @@ class MainActivity : AppCompatActivity(), PhotosAdapter.PhotoAdapterListener {
         builder.setView(rootView)
         builder.setNegativeButton("Cancelar", null)
         builder.setPositiveButton("Adicionar") { _, _ ->
-            photoViewModel.insertPhoto(Photo(
-                nameEdit.text.toString(),
-                SimpleDateFormat("dd-MM-yyyy").format(Date()),
-                photoUri))
+//            photoViewModel.insertPhoto(Photo(
+//                nameEdit.text.toString(),
+//                SimpleDateFormat("dd-MM-yyyy").format(Date()),
+//                photoUri))
 
-            firebaseViewModel.uploadPhoto(Photo(
-                nameEdit.text.toString(),
-                SimpleDateFormat("dd-MM-yyyy").format(Date()),
-                photoUri))
+            firebaseViewModel.uploadPhoto(
+                Photo(
+                    nameEdit.text.toString(),
+                    SimpleDateFormat("dd-MM-yyyy").format(Date()),
+                    photoUri
+                )
+            )
+            upload_progress_bar.show()
         }
         builder.create().show()
     }

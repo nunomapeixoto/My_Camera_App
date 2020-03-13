@@ -1,5 +1,6 @@
 package com.example.mycameraapp
 
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Build
 import android.view.LayoutInflater
@@ -7,11 +8,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import com.bumptech.glide.Glide
 import com.google.firebase.storage.FirebaseStorage
 
-class PhotosAdapter(private val photosList: List<Photo>, private val photoAdapterListener: PhotoAdapterListener) :
+class PhotosAdapter(private var photosList: MutableList<Photo>, private val photoAdapterListener: PhotoAdapterListener) :
     RecyclerView.Adapter<PhotosAdapter.MyViewHolder>() {
 
     val storage = FirebaseStorage.getInstance()
@@ -39,11 +42,31 @@ class PhotosAdapter(private val photosList: List<Photo>, private val photoAdapte
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
         val photo = photosList[position]
 
+        val circularProgressDrawable = CircularProgressDrawable(holder.itemView.context)
+        circularProgressDrawable.strokeWidth = 5f
+        circularProgressDrawable.centerRadius = 30f
+        circularProgressDrawable
+            .setColorSchemeColors(ContextCompat.getColor(holder.itemView.context, R.color.colorAccent))
+        circularProgressDrawable.start()
+
         holder.dateTv.text = photo.date
         holder.nameTv.text = photo.name
-//        Glide.with(holder.itemView).load(Uri.parse(photo.uri)).into(holder.photoIv)
-        GlideApp.with(holder.itemView).load(storage.getReference(photo.uri)).into(holder.photoIv)
+        Glide.with(holder.itemView)
+            .load(storage.getReference(photo.uri))
+            .placeholder(circularProgressDrawable)
+            .into(holder.photoIv)
 
         holder.itemView.setOnClickListener { photoAdapterListener.onPhotoClick(photo.uri) }
+    }
+
+    fun addPhoto(photo: Photo) {
+        photosList.add(photo)
+        notifyDataSetChanged()
+    }
+
+    fun setList(list: MutableList<Photo>) {
+        photosList = list
+        notifyDataSetChanged()
+
     }
 }
