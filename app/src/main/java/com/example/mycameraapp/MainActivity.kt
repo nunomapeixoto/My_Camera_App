@@ -1,24 +1,17 @@
 package com.example.mycameraapp
 
 import android.Manifest
-import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
-import android.transition.Transition
 import android.view.LayoutInflater
-import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.widget.EditText
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
@@ -29,14 +22,13 @@ import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.auth.FirebaseAuth
 import com.leinardi.android.speeddial.SpeedDialActionItem
 import com.leinardi.android.speeddial.SpeedDialView
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.photo_item.*
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -54,6 +46,8 @@ class MainActivity : AppCompatActivity(), PhotosAdapter.PhotoAdapterListener {
     private lateinit var emptyTv: TextView
     private lateinit var adapter: PhotosAdapter
 
+    private lateinit var firebaseViewModelFactory: FirebaseViewModelFactory
+    private lateinit var firebaseViewModel: FirebaseViewModel
     private lateinit var photoViewModelFactory: PhotoViewModelFactory
     private lateinit var photoViewModel: PhotoViewModel
     private lateinit var compositeDisposable: CompositeDisposable
@@ -64,19 +58,32 @@ class MainActivity : AppCompatActivity(), PhotosAdapter.PhotoAdapterListener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        val auth = FirebaseAuth.getInstance()
+        supportActionBar?.subtitle = auth.currentUser?.email
 
         photoViewModelFactory =
             Injection.providePhotoViewModelFactory(applicationContext)
         photoViewModel = ViewModelProvider(this, photoViewModelFactory).get(PhotoViewModel::class.java)
 
-
+        firebaseViewModelFactory =
+            Injection.provideFirebaseViewModelFactory()
+        firebaseViewModel = ViewModelProvider(this, firebaseViewModelFactory).get(FirebaseViewModel::class.java)
 
         compositeDisposable = CompositeDisposable()
-        compositeDisposable.add(photoViewModel.getPhotos()
+//        compositeDisposable.add(photoViewModel.getPhotos()
+//            .subscribeOn(Schedulers.io())
+//            .observeOn(AndroidSchedulers.mainThread())
+//            .subscribe { photos ->
+//                adapter = PhotosAdapter(photos, this@MainActivity)
+//                recyclerView.adapter = adapter
+//                setViewsVisibility()
+//            })
+
+        compositeDisposable.add(firebaseViewModel.getPhotos()
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .subscribe { photos ->
-                adapter = PhotosAdapter(photos, this@MainActivity)
+            .subscribe {
+                adapter = PhotosAdapter(it, this@MainActivity)
                 recyclerView.adapter = adapter
                 setViewsVisibility()
             })
@@ -117,6 +124,8 @@ class MainActivity : AppCompatActivity(), PhotosAdapter.PhotoAdapterListener {
         recyclerView.layoutManager = linearLayoutManager
         recyclerView.itemAnimator = DefaultItemAnimator()
         recyclerView.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
+
+        firebaseViewModel.getPhotosList()
 
     }
 
@@ -232,6 +241,11 @@ class MainActivity : AppCompatActivity(), PhotosAdapter.PhotoAdapterListener {
         builder.setNegativeButton("Cancelar", null)
         builder.setPositiveButton("Adicionar") { _, _ ->
             photoViewModel.insertPhoto(Photo(
+                nameEdit.text.toString(),
+                SimpleDateFormat("dd-MM-yyyy").format(Date()),
+                photoUri))
+
+            firebaseViewModel.uploadPhoto(Photo(
                 nameEdit.text.toString(),
                 SimpleDateFormat("dd-MM-yyyy").format(Date()),
                 photoUri))

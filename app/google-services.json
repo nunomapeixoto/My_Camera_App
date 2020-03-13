@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "672035017349",
+    "firebase_url": "https://mycameraapp-59e82.firebaseio.com",
+    "project_id": "mycameraapp-59e82",
+    "storage_bucket": "mycameraapp-59e82.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:672035017349:android:1096fae07a100c490b8fec",
+        "android_client_info": {
+          "package_name": "com.example.mycameraapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "672035017349-dkqc0ihdgbrrcf3h9jm6uh3onuo33r4v.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9Q7j7sYzm5y-GoO4mB5Y5efhrkq0eOmI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "672035017349-dkqc0ihdgbrrcf3h9jm6uh3onuo33r4v.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

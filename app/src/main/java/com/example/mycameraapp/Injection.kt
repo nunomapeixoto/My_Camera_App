@@ -14,4 +14,13 @@ object Injection {
         return PhotoViewModelFactory(model)
     }
 
+    private fun getFirebaseModel(): FirebaseModel {
+        return FirebaseModel.getInstance()
+    }
+
+    fun provideFirebaseViewModelFactory(): FirebaseViewModelFactory {
+        val model = getFirebaseModel()
+        return FirebaseViewModelFactory(model)
+    }
+
 }

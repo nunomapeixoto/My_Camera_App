@@ -9,9 +9,12 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.google.firebase.storage.FirebaseStorage
 
 class PhotosAdapter(private val photosList: List<Photo>, private val photoAdapterListener: PhotoAdapterListener) :
     RecyclerView.Adapter<PhotosAdapter.MyViewHolder>() {
+
+    val storage = FirebaseStorage.getInstance()
 
     interface PhotoAdapterListener {
         fun onPhotoClick(photoUri: String)
@@ -38,7 +41,8 @@ class PhotosAdapter(private val photosList: List<Photo>, private val photoAdapte
 
         holder.dateTv.text = photo.date
         holder.nameTv.text = photo.name
-        Glide.with(holder.itemView).load(Uri.parse(photo.uri)).into(holder.photoIv)
+//        Glide.with(holder.itemView).load(Uri.parse(photo.uri)).into(holder.photoIv)
+        GlideApp.with(holder.itemView).load(storage.getReference(photo.uri)).into(holder.photoIv)
 
         holder.itemView.setOnClickListener { photoAdapterListener.onPhotoClick(photo.uri) }
     }
